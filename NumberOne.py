@@ -8,29 +8,36 @@ import xgboost as xgb
 # read file
 
 
-trainOrigin = pd.read_csv('~/Documents/DMC16/Aufgabenstellung/orders_train.txt', sep=';')
-test = pd.read_csv('~/Documents/DMC16/Aufgabenstellung/orders_class.txt', sep=';')
+trainOrigin = pd.read_csv('~/Documents/DMC16/dataPrep/DataPrepV002Train.csv')
+test = pd.read_csv('~/Documents/DMC16/dataPrep/DataPrepV002Test.csv')
 
 
 
 def preprocess(train, test):
-
-    train = train.drop(['orderID', 'orderDate', 'articleID', 'sizeCode', 'voucherID', 'customerID'], axis=1)
-    test = test.drop(['orderID', 'orderDate', 'articleID', 'sizeCode', 'voucherID', 'customerID'], axis=1)
+    attributetodrop = ['row ID', 'BasketID', 'customerID', 'Buy_First', 'Buy_Last', 'orderID','articleID','sizeCode',
+                      'voucherID','price [Binned]','BasketValue [Binned]','SinglePrice [Binned]','orderDate',
+                      'RealArticleID','RealCustOrderDayID','rrp [Binned]']
+    attributetofillnan= ['Mehrfachbesteller','ExtremeBesteller','Einmalbesteller']
+    train = train.drop(attributetodrop, axis=1)
+    test = test.drop(attributetodrop, axis=1)
 
     print("train.info()")
     print(train.info())
     print("remove colorCodeMissingValues")
     train= train[train.rrp.notnull()]
-    train= train[train.productGroup.notnull() ]
+    #    train= train[train.productGroup.notnull() ]
 
     test= test[test.rrp.notnull()]
-    test= test[test.productGroup.notnull()]
+    #    test= test[test.productGroup.notnull()]
 
-    print("train.info()")
+    for attr in attributetofillnan:
+        train[attr]=train[attr].fillna(0)
+        test[attr]=test[attr].fillna(0)
+
+    print("\n\n\ntrain.info()")
     print(train.info())
 
-    print("test.info()")
+    print("\n\n\ntest.info()")
     print(test.info())
 
     x_cat_train = train['paymentMethod'].T.to_dict().values()
@@ -39,21 +46,14 @@ def preprocess(train, test):
     train['paymentMethod'] = le.fit_transform(train['paymentMethod'])
     test['paymentMethod'] = le.transform(test['paymentMethod'])
 
-#   enc = preprocessing.OneHotEncoder()
-#   print(enc.fit_transform(train['paymentMethod']))
-#    enc.transform(test['paymentMethod'])
+    #   enc = preprocessing.OneHotEncoder()
+    #   print(enc.fit_transform(train['paymentMethod']))
+    #    enc.transform(test['paymentMethod'])
 
 
     print(train.head())
 
     return train, test
-
-
-'''
-   print(trainDataset.sizeCode)
-
-
-'''
 
 
 def predict(train,label, test):
@@ -62,7 +62,7 @@ def predict(train,label, test):
 
     #clf = ensemble.RandomForestClassifier(n_estimators=100, n_jobs=2,)
     #clf = svm.LinearSVC()
-    #clf.fit(train, label)
+    clf.fit(train, label)
     print("classify")
     pred = clf.predict(test)
     #test['prediction']=pred
@@ -86,9 +86,10 @@ def evaluate(pred,label):
 print("preprocessing")
 trainOrigin, test = preprocess(trainOrigin, test)
 
-split=2000000
-train = trainOrigin[:split]
-test = trainOrigin[split:]
+#split=1000000
+#train = trainOrigin[:split]
+#test = trainOrigin[split:]
+train = trainOrigin #falls kein split dann gesamtes train train zuweisen
 print(train.info())
 print(test.info())
 label = train[['returnQuantity']].values.ravel()
